@@ -4,12 +4,14 @@ As our project work we perform analysis of the Data Science and STEM Salaries da
 62,000+ STEM salaries scraped from levels.fyi.
 The Kaggle dataset can be found here:
 https://www.kaggle.com/datasets/jackogozaly/data-science-and-stem-salaries?select=Levels_Fyi_Salary_Data.csv
-# Authors
+## Authors
 - Marina Bueno García
 - Tymoteusz Ciesielski
 - Ewa Kupczyk
 - Lucía Trillo Carreras
-# Notes for work:
+## First delivery
+We took care of preprocessing and visualisation. We drew some first conclusions. The outcome was presented in a form of 10 minutes video which you can find here: https://www.youtube.com/watch?v=QIKk9Wc0Io8
+## Notes for work:
 0. The current working notebook is 2nd_delivery_notebook
 1. Work only on the version from this repo. If you finish some feature, check that it is not causing errors, push it to this repo 
 2. I cleaned the notebook a bit, I did some POC tree, don't know any theory behind it :)
