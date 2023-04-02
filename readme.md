@@ -1,8 +1,8 @@
 # Introduction
 This is the repo for 2023 Data Valorisation course at Polytech Nice.
 As our project work we perform analysis of the Data Science and STEM Salaries dataset,
-62,000+ STEM salaries scraped from levels.fyi
-Can be found here:
+62,000+ STEM salaries scraped from levels.fyi.
+The Kaggle dataset can be found here:
 https://www.kaggle.com/datasets/jackogozaly/data-science-and-stem-salaries?select=Levels_Fyi_Salary_Data.csv
 # Authors
 - Marina Bueno García
