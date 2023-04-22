@@ -17,7 +17,9 @@ palette3 <-colorRampPalette(c("#5e9159","#599190","#645991"))
 
 # Import the dataset from your local filesystem
 # Paste your path to .csv below
-df <- read.csv('/Users/marinabuenogarcia/Documents/MASTER/UCA/DataValorisation/Kaggle project/Levels_Fyi_Salary_Data.csv')
+#df <- read.csv('/Users/marinabuenogarcia/Documents/MASTER/UCA/DataValorisation/Kaggle project/Levels_Fyi_Salary_Data.csv')
+df <- read.csv('C:/Users/Tymoteusz/Desktop/DataValorisation/Project/Levels_Fyi_Salary_Data.csv')
+
 df_raw <- df
 
 
@@ -329,26 +331,28 @@ sum(is.na(df_onehot))
 
 ## Regression tree
 
-#build the initial tree
-treeFitted <-rpart(totalyearlycompensation~.,data=df_onehot,method='anova')
-printcp(treeFitted)
+# Whole one-hot encoded data frame, all the parameters
+full_tree <- rpart(totalyearlycompensation~., data=df_onehot, method='anova')
+rpart.plot(full_tree)
 
-#identify best cp value to use
-best <- treeFitted$cptable[which.min(treeFitted$cptable[,"xerror"]),"CP"]
+# building a tree only based on the social features: race, gender, education
+social_tree <- rpart(totalyearlycompensation~ed_master+ed_bachelor+ed_doctor+
+                  race_asian+ race_white+ race_hispanic+ race_black+ race_two_or_more+
+                  gender_female+ gender_other,
+                  data=df_onehot, method='anova', control = rpart.control(cp = 0.005))
+rpart.plot(new_tree)
 
-#produce a pruned tree based on the best cp value
-pruned_tree <- prune(treeFitted, cp=best)
+# removing education from the social features
+non_ed_tree <- rpart(totalyearlycompensation~race_asian+ race_white+ race_hispanic+ race_black+ race_two_or_more+
+                      gender_female+ gender_other,
+                     data=df_onehot, method='anova', control = rpart.control(cp = 0.0005))
+rpart.plot(non_ed_tree)
 
-#plot the pruned tree
-prp(pruned_tree,
-    faclen=0, #use full names for factor labels
-    extra=1, #display number of obs. for each terminal node
-    roundint=F, #don't round to integers in output
-    digits=5) #display 5 decimal places in output
-
-# rpart.plot(treeFitted,type=3)
-# 
-# plotcp(treeFitted)
+# as an additional analysis we applied classification tree on non-one-hot-encoded data 
+classification_tree <- rpart(Education~gender+
+                               Race_Asian+Race_White+Race_Two_Or_More+Race_Black+Race_Hispanic,
+              data=df, method='class')
+rpart.plot(classification_tree)
 
 
 # SVM 
