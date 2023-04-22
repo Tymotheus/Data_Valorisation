@@ -8,6 +8,8 @@ library(countrycode) # For adding continent variable
 library(corrplot)
 library(rpart)
 library(rpart.plot)
+library(randomForest)
+library(caTools)
 
 # Palettes
 palette1 <- colorRampPalette(c("#803934","#3f67ab","#613fab"))
@@ -340,7 +342,7 @@ social_tree <- rpart(totalyearlycompensation~ed_master+ed_bachelor+ed_doctor+
                   race_asian+ race_white+ race_hispanic+ race_black+ race_two_or_more+
                   gender_female+ gender_other,
                   data=df_onehot, method='anova', control = rpart.control(cp = 0.005))
-rpart.plot(new_tree)
+rpart.plot(social_tree)
 
 # removing education from the social features
 non_ed_tree <- rpart(totalyearlycompensation~race_asian+ race_white+ race_hispanic+ race_black+ race_two_or_more+
@@ -355,8 +357,19 @@ classification_tree <- rpart(Education~gender+
 rpart.plot(classification_tree)
 
 
-# this comment might be for future
+# Random forest compared with regression tree
+split <- sample.split(df_onehot, SplitRatio=0.8)
+train <- subset(df_onehot, split == "TRUE")
+test <- subset(df_onehot, split == "FALSE")
+set.seed(120) # We set it to obtain always the same results, in production environment we would skip this step
+classifier_RF = randomForest(x = train, y= train$totalyearlycompensation, ntree=50, keep.forest=TRUE)
+y_pred_RF = predict(newdata=test, object=classifier_RF) # remove column with yearly compensation...?
+classifier_RT <- rpart(totalyearlycompensation~., data=test, method="anova" )
+y_pred_RT = predict(newdata=test, object=classifier_RT)
 
+# Comparing the accuracy (MSE) between regression tree and random forest 
+mse_RF = MSE(y_pred_RF, test$totalyearlycompensation) # 394 041 928
+mse_RT = MSE(y_pred_RT, test$totalyearlycompensation) # 10 274 660 735
 # SVM 
 
 library(e1071)
