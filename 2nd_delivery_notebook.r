@@ -10,6 +10,7 @@ library(rpart)
 library(rpart.plot)
 library(randomForest)
 library(caTools)
+library(MLmetrics)
 
 # Palettes
 palette1 <- colorRampPalette(c("#803934","#3f67ab","#613fab"))
@@ -337,39 +338,95 @@ sum(is.na(df_onehot))
 full_tree <- rpart(totalyearlycompensation~., data=df_onehot, method='anova')
 rpart.plot(full_tree)
 
-# building a tree only based on the social features: race, gender, education
+# Building a tree only based on the social features: race, gender, education
 social_tree <- rpart(totalyearlycompensation~ed_master+ed_bachelor+ed_doctor+
                   race_asian+ race_white+ race_hispanic+ race_black+ race_two_or_more+
                   gender_female+ gender_other,
                   data=df_onehot, method='anova', control = rpart.control(cp = 0.005))
 rpart.plot(social_tree)
 
-# removing education from the social features
+
+# Removing education from the social features
 non_ed_tree <- rpart(totalyearlycompensation~race_asian+ race_white+ race_hispanic+ race_black+ race_two_or_more+
                       gender_female+ gender_other,
                      data=df_onehot, method='anova', control = rpart.control(cp = 0.0005))
 rpart.plot(non_ed_tree)
 
-# as an additional analysis we applied classification tree on non-one-hot-encoded data 
+# As an additional analysis we applied classification tree on non-one-hot-encoded data 
 classification_tree <- rpart(Education~gender+
                                Race_Asian+Race_White+Race_Two_Or_More+Race_Black+Race_Hispanic,
               data=df, method='class')
 rpart.plot(classification_tree)
 
 
-# Random forest compared with regression tree
+# Random forest compared with the regression tree
+# We create train and test set, we train both our models and then validate their accuracy
 split <- sample.split(df_onehot, SplitRatio=0.8)
 train <- subset(df_onehot, split == "TRUE")
 test <- subset(df_onehot, split == "FALSE")
 set.seed(120) # We set it to obtain always the same results, in production environment we would skip this step
 classifier_RF = randomForest(x = train, y= train$totalyearlycompensation, ntree=50, keep.forest=TRUE)
-y_pred_RF = predict(newdata=test, object=classifier_RF) # remove column with yearly compensation...?
+y_pred_RF = predict(newdata=test, object=classifier_RF)
 classifier_RT <- rpart(totalyearlycompensation~., data=test, method="anova" )
 y_pred_RT = predict(newdata=test, object=classifier_RT)
 
-# Comparing the accuracy (MSE) between regression tree and random forest 
-mse_RF = MSE(y_pred_RF, test$totalyearlycompensation) # 394 041 928
-mse_RT = MSE(y_pred_RT, test$totalyearlycompensation) # 10 274 660 735
+# Comparing the chosen accuracy metric (RMSE) between regression tree and random forest 
+rmse_RF = sqrt(MSE(y_pred_RF, test$totalyearlycompensation)) # ~10k
+rmse_RT = sqrt(MSE(y_pred_RT, test$totalyearlycompensation)) # ~100k
+
+
+
+## Alternative methods for finding the cp parameter - the optimal one - for building the trees
+## Calculated according to the lab 8
+########
+## Alternative full one-hot data
+alt_full_tree <- rpart( totalyearlycompensation~., 
+                     data = df_onehot, 
+                     method='anova', # output is a categorical variable by asking for method=’class’
+                     control = rpart.control(
+                       xval = 10, # number of cross-validations
+                       minbucket = 2, # the minimum number of observations in any terminal (leaf) node
+                       cp = 0.0)
+)
+optimalCp = alt_full_tree$cptable[which.min(alt_full_tree$cptable[,4]),1]
+alt_full_tree_Optimal <- prune(alt_full_tree, cp=optimalCp)
+#Plot the decision tree
+rpart.plot(alt_full_tree_Optimal,type=3)
+
+## Alternative data with all social features
+alt_social_tree <- rpart(totalyearlycompensation~ed_master+ed_bachelor+ed_doctor+
+                           race_asian+ race_white+ race_hispanic+ race_black+ race_two_or_more+
+                           gender_female+ gender_other,
+                        data = df_onehot, 
+                        method='anova', # output is a categorical variable by asking for method=’class’
+                        control = rpart.control(
+                          xval = 10, # number of cross-validations
+                          minbucket = 2, # the minimum number of observations in any terminal (leaf) node
+                          cp = 0.0)
+)
+optimalCp = alt_social_tree$cptable[which.min(alt_social_tree$cptable[,4]),1]
+alt_social_tree_Optimal <- prune(alt_social_tree, cp=optimalCp)
+#Plot the decision tree
+rpart.plot(alt_social_tree_Optimal,type=3)
+
+## Alternative data with all social features except education
+alt_non_ed_tree <- rpart(totalyearlycompensation~race_asian+ race_white+ race_hispanic+ race_black+ race_two_or_more+
+                           gender_female+ gender_other,
+                         data = df_onehot, 
+                         method='anova', # output is a categorical variable by asking for method=’class’
+                         control = rpart.control(
+                           xval = 10, # number of cross-validations
+                           minbucket = 2, # the minimum number of observations in any terminal (leaf) node
+                           cp = 0.0)
+)
+optimalCp = alt_non_ed_tree$cptable[which.min(alt_non_ed_tree$cptable[,4]),1]
+alt_non_ed_tree_Optimal <- prune(alt_non_ed_tree, cp=optimalCp)
+#Plot the decision tree
+rpart.plot(alt_non_ed_tree_Optimal,type=3)
+##########
+
+
+
 # SVM 
 
 library(e1071)
