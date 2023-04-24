@@ -5,10 +5,10 @@ As our project work we perform analysis of the Data Science and STEM Salaries da
 The Kaggle dataset can be found here:
 https://www.kaggle.com/datasets/jackogozaly/data-science-and-stem-salaries?select=Levels_Fyi_Salary_Data.csv
 ## Authors
-- Marina Bueno García (logistic regression + Support Vector Machine)
-- Tymoteusz Ciesielski (regression decision trees + random forests)
-- Ewa Kupczyk (regression decision trees + random forests)
-- Lucía Trillo Carreras (logistic regression + Support Vector Machine)
+- **Marina Bueno García** (logistic regression + Support Vector Machine)
+- **Tymoteusz Ciesielski** (regression decision trees + random forests)
+- **Ewa Kupczyk** (regression decision trees + random forests)
+- **Lucía Trillo Carreras** (logistic regression + Support Vector Machine)
 ## First delivery
 We took care of preprocessing and visualisation. We drew some first conclusions. The outcome was presented in a form of 10 minutes video which you can find here: https://www.youtube.com/watch?v=QIKk9Wc0Io8
 ## Notes for work:
