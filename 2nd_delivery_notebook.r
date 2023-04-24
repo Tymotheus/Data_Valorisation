@@ -427,15 +427,69 @@ rpart.plot(alt_non_ed_tree_Optimal,type=3)
 
 
 
+# LINEAR REGRESSION MODEL
+
+# Import libraries and load data
+library(dplyr)
+library(caret)
+
+# Split data into training and testing sets
+df_social<-df_onehot[c("totalyearlycompensation","ed_other","ed_master","ed_doctor","race_asian","race_hispanic","race_black","race_two_or_more","gender_female","gender_other")]
+
+df_social <- na.omit(df_onehot)
+
+# We eliminate these variables due to collinearity issues
+df_social <- subset(df_social, select = -c(year_2018, year_2019, year_2021,com_ibm,title_hweng,continent_europe))
+
+
+# Define your outcome variable
+Y <- df_social[c("totalyearlycompensation")]
+df_social <- subset(df_social, select = -c(totalyearlycompensation))
+
+# Split the data into training and testing sets
+set.seed(123)
+trainIndex <- sample(1:nrow(df_social), 0.7 * nrow(df_social))
+Ytrain <- Y[trainIndex,]
+trainData <- df_social[trainIndex,]
+Ytest <- Y[-trainIndex,]
+testData <- df_social[-trainIndex,]
+
+
+# Fit a linear regression model using the training data
+linearModel <- lm(Ytrain ~ ., data = trainData)
+
+# Predict the output variable using the testing data and calculate the residuals
+predictions <- predict(linearModel, newdata = testData)
+predictions <- unname(predictions)
+residuals <- Ytest - predictions
+
+
+# Plot the residuals
+plot(residuals ~ predictions, xlab = "Predictions", ylab = "Residuals",
+     main = "Residuals vs. Predictions")
+abline(h = 0, col = "red")
+
+# Calculate the mean squared error (MSE)
+mse <- mean(residuals^2)
+cat("Mean Squared Error:", mse, "\n")
+
+summary(Y)
+
+summary(linearModel)
+
 # SVM 
 
 library(e1071)
 
-df_social<-df_onehot[c("totalyearlycompensation","ed_bachelor","ed_master","ed_doctor","race_asian","race_hispanic","race_black","race_two_or_more","gender_female","gender_other")]
+df_social<-df_onehot[c("totalyearlycompensation","ed_other","ed_master","ed_doctor","race_asian","race_hispanic","race_black","race_two_or_more","gender_female","gender_other")]
+
+df_social <- na.omit(df_onehot)
+
+df_social <- subset(df_social, select = -c(year_2018, year_2019))
+
 
 # Define your outcome variable
 Y <- df_social[c("totalyearlycompensation")]
-
 df_social <- subset(df_social, select = -c(totalyearlycompensation))
 
 # Split the data into training and testing sets
@@ -458,38 +512,37 @@ svmPred_nu <- predict(svmModel_nu, testData)
 RMSE_nu <- sqrt(mean((svmPred_nu - Ytest)^2))
 RMSE_nu
 
-
+# We repeat the same for the other models
+# Model 2
 svmModel_eps <- svm(Ytrain ~ ., data = trainData, kernel = "linear", type="eps-regression")
 summary(svmModel_eps)
+coef(svmModel_eps)
 svmPred_eps <- predict(svmModel_eps, testData)
 RMSE_eps <- sqrt(mean((svmPred_eps - Ytest)^2))
 RMSE_eps
 
-
-#The RBF kernel is also a non-linear function that maps the data into a higher dimensional space. It is commonly used in SVMs as it can approximate any non-linear function.
-# Radial Basis Function (RBF) kernel: K(x,y) = exp(-gamma ||x-y||^2), where gamma is a parameter that determines the width of the kernel.
-
+# Model 3
 svmModel_nu_ra <- svm(Ytrain ~ ., data = trainData, kernel = "radial", type = "nu-regression")
 summary(svmModel_nu_ra)
 svmPred_nu_ra <- predict(svmModel_nu_ra, testData)
 RMSE_nu_ra <- sqrt(mean((svmPred_nu_ra - Ytest)^2))
 RMSE_nu_ra
 
+# Model 4
 svmModel_eps_ra <- svm(Ytrain ~ ., data = trainData, kernel = "radial", type = "eps-regression")
 summary(svmModel_eps_ra)
 svmPred_eps_ra <- predict(svmModel_eps_ra, testData)
 RMSE_eps_ra <- sqrt(mean((svmPred_eps_ra - Ytest)^2))
 RMSE_eps_ra
 
-
-
+# Model 5
 svmModel_nu_po <- svm(Ytrain ~ ., data = trainData, kernel = "polynomial", type = "nu-regression")
 summary(svmModel_nu_po)
 svmPred_nu_po <- predict(svmModel_nu_po, testData)
 RMSE_nu_po <- sqrt(mean((svmPred_nu_po - Ytest)^2))
 RMSE_nu_po
 
-
+# Model 6
 svmModel_eps_po <- svm(Ytrain ~ ., data = trainData, kernel = "polynomial", type = "eps-regression")
 summary(svmModel_eps_po)
 svmPred_eps_po <- predict(svmModel_eps_po, testData)
@@ -497,67 +550,29 @@ RMSE_eps_po <- sqrt(mean((svmPred_eps_po - Ytest)^2))
 RMSE_eps_po
 
 
+# Residual graph
+residuals <- Ytest - svmPred_nu_ra
+plot(svmPred_nu_ra, residuals, main="Residual Plot", xlab="Predicted Values", ylab="Residuals")
+plot(Ytest,residuals, main="Residual Plot (radial + nu regression)", xlab="Test Values", ylab="Residuals")
+abline(h = 0, col = "red")
 
-max(Y)
-min(Y)
-summary(Y)
-
-summary(Ytest)
-
-
-residuals <- Ytest - svmPred_nu
-plot(svmPred_nu, residuals, main="Residual Plot", xlab="Predicted Values", ylab="Residuals")
-plot(Ytest, residuals, main="Residual Plot", xlab="Test Values", ylab="Residuals")
-
+# Predicted vs actual values graph
 # Calculate the limits based on the range of the actual and predicted values
-lims <- range(c(Ytest, svmPred_nu))
+lims <- range(c(Ytest, svmPred_nu_ra))
 
 # Plot the data with the same scale for x and y axes
-plot(Ytest, svmPred_nu, main = "Predicted vs Actual Values", xlab = "Actual Values", ylab = "Predicted Values", xlim = lims, ylim = lims)
+plot(Ytest, svmPred_nu_ra, main = "Predicted vs Actual Values (radial + nu regression)", xlab = "Actual Values", ylab = "Predicted Values", xlim = lims, ylim = lims)
 abline(0, 1, col = "red") # Add line for perfect predictions (y = x)
 
 
-# LINEAR REGRESSION MODEL
+# Evaluate our model
+summary(Ytest)
 
-# Import libraries and load data
-library(dplyr)
-library(caret)
-
-# Split data into training and testing sets
-df_social<-df_onehot[c("totalyearlycompensation","ed_bachelor","ed_master","ed_doctor","race_asian","race_hispanic","race_black","race_two_or_more","gender_female","gender_other")]
-
-# Define your outcome variable
-Y <- df_social[c("totalyearlycompensation")]
-
-df_social <- subset(df_social, select = -c(totalyearlycompensation))
-
-# Split the data into training and testing sets
-set.seed(123)
-trainIndex <- sample(1:nrow(df_social), 0.7 * nrow(df_social))
-Ytrain <- Y[trainIndex,]
-trainData <- df_social[trainIndex,]
-Ytest <- Y[-trainIndex,]
-testData <- df_social[-trainIndex,]
-
-# Check correlation matrix
-cor(trainData)
-
-
-# Fit a linear regression model using the training data
-linearModel <- lm(Ytrain ~ ., data = trainData)
-
-# Predict the output variable using the testing data and calculate the residuals
-predictions <- predict(linearModel, newdata = testData)
-residuals <- Ytest - predictions
-
-# Plot the residuals
-plot(residuals ~ predictions, xlab = "Predictions", ylab = "Residuals",
-     main = "Residuals vs. Predictions")
-abline(h = 0, col = "red")
-
-# Calculate the mean squared error (MSE)
-mse <- mean(residuals^2)
-cat("Mean Squared Error:", mse, "\n")
+# R-squared
+R2_nu_ra <- 1 - sum((Ytest - svmPred_nu_ra)^2) / sum((Ytest - mean(Ytest))^2)
+R2_nu_ra
+R2_nu <- 1 - sum((Ytest - svmPred_nu)^2) / sum((Ytest - mean(Ytest))^2)
+R2_nu
 
 
 
