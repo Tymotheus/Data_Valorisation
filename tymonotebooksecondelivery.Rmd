@@ -416,3 +416,15 @@ As a summary we decided to gather all the metrics we used to evaluate the models
 
 Average salary for all the people in our dataset is 197,425 USD. Linear Regression, SVR and Regression Trees models all have on average 90k RMSE, this means on average 46% error in the prediction of a salary. Due to such high inaccuracies, the abovementioned methods are not good predictors for this problem.\
 However the last model, Random Forest that we created has around 12k RMSE, meaning average error of 6%. This is a much better performance, and in our opinion is a good predictor. Due to the relatively high accuracy, we see its real value for the users and a potential business value.
+
+## References
+
+-   <https://uc-r.github.io/regression_trees>
+
+-   <https://en.wikipedia.org/wiki/Random_forest>
+
+-   <https://www.r-bloggers.com/2021/04/random-forest-in-r/>
+
+-   <https://www.geeksforgeeks.org/random-forest-approach-for-regression-in-r-programming/>
+
+
