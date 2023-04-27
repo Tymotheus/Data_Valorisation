@@ -8,7 +8,7 @@ output:
 
 ## Introduction
 
-This notebook is the second delivery for Data Valorization course, in Université Cote de Azur, Nice (2023) . You can watch the explanation for the aim of the project and the data cleaning [here](https://www.youtube.com/watch?v=QIKk9Wc0Io89).
+This notebook is the second delivery for Data Valorization course, in Université Cote de Azur, Nice (2023). You can watch the explanation for the aim of the project and the data cleaning [here](https://www.youtube.com/watch?v=QIKk9Wc0Io89).
 
 -   Business goal: Analyze how social features( race, gender)and education affect STEM salaries.
 
@@ -46,9 +46,9 @@ library(countrycode) # For adding continent variable
 library(corrplot)
 library(rpart)
 library(rpart.plot)
-#library(randomForest)
-#library(caTools)
-#library(MLmetrics)
+library(randomForest)
+library(caTools)
+library(MLmetrics)
 library(e1071)
 ```
 
@@ -59,9 +59,7 @@ The salary dataset we have used is scraped from Levels Fyi, a US-based online se
 We import our cleaned dataset from the first delivery:
 
 ```{r}
-df_onehot <- read.csv('C:/Users/ltcmu/OneDrive/Documentos/Master/Data Valorisation/Proyecto/clean_salary_data.csv')
-#df_onehot <- read.csv('C:/Users/Tymoteusz/Desktop/Data_Valorisation/clean_salary_data.csv')
-#df_onehot <- read.csv('/Users/marinabuenogarcia/Downloads/clean_salary_data.csv')
+df_onehot <- read.csv('data/clean_salary_data.csv')
 df_onehot <- na.omit(df_onehot) #Ensure we dont have NA values
 ```
 
