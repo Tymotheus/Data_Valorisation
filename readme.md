@@ -11,11 +11,8 @@ https://www.kaggle.com/datasets/jackogozaly/data-science-and-stem-salaries?selec
 - **Lucía Trillo Carreras** (logistic regression + Support Vector Machine)
 ## First delivery
 We took care of preprocessing and visualisation. We drew some first conclusions. The outcome was presented in a form of 10 minutes video which you can find here: https://www.youtube.com/watch?v=QIKk9Wc0Io8
-## Notes for work:
-0. The current working notebook is 2nd_delivery_notebook
-1. Work only on the version from this repo. If you finish some feature, check that it is not causing errors, push it to this repo 
-2. I cleaned the notebook a bit, I did some POC tree, don't know any theory behind it :)
-3. Move plotting to some other place?
+## Second delivery
+We created the predictor models. We used linear regression, SVR, regression decision trees and random forests. The best result we obtained for the forest of 50 random trees - **on average our model has an error in predcting the real salary by only 6% **. 
 ## Using our code
 To use our code, get the data from the data folder and use one of the 2 R notebooks. Also make sure to mention us if you want to show your results to the world :)
 ## To do in the future:
