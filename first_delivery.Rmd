@@ -1,0 +1,384 @@
+---
+title: "First delivery Notebook How do education and social features affect STEM salaries? "
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+---
+
+## Introduction
+
+This notebook is the first delivery for Data Valorization course, in Université Cote de Azur, Nice (2023) . You can watch the explanation for the aim of the project and the data cleaning [here](https://www.youtube.com/watch?v=QIKk9Wc0Io89).
+
+-   Business goal: Analyze how social features( race, gender)and education affect STEM salaries.
+
+-   Technical goal: Perform regression to predict total yearly income
+
+## Authors
+
+Tymoteusz Igor Ciesielski [*tymoteusz-igor.ciesielski\@etu.univ-cotedazur.fr*](mailto:tymoteusz-igor.ciesielski@etu.univ-cotedazur.fr){.email}
+
+Lucia Trillo Carreras [*lucia.trillo-carreras\@etu.univ-cotedazur.fr*](mailto:lucia.trillo-carreras@etu.univ-cotedazur.fr){.email}
+
+Ewa Kupczyk [*ewa.kupczyk\@etu.univ-cotedazur.fr*](mailto:ewa.kupczyk@etu.univ-cotedazur.fr){.email}
+
+Marina Bueno Garcia [*marina.bueno-garcia\@etu.univ-cotedazur.fr*](mailto:marina.bueno-garcia@etu.univ-cotedazur.fr){.email}
+
+## Libraries
+
+```{r}
+library(ggplot2)
+library(plotly) #interactive visualisation
+library(lattice) #data exploration (corellations)
+library(dplyr)
+library(countrycode) # For adding continent variable
+library(corrplot)
+library(rpart)
+library(rpart.plot)
+library(randomForest)
+library(caTools)
+library(MLmetrics)
+require(tidyr)
+require(dplyr)
+
+
+```
+
+``` {library(tidyverse)}
+```
+
+## Palettes
+
+```{r}
+palette1 <- colorRampPalette(c("#803934","#3f67ab","#613fab"))
+palette2 <-colorRampPalette(c("#5000ff","#d900ff","#ff0077"))
+palette3 <-colorRampPalette(c("#5e9159","#599190","#645991"))
+
+```
+
+## Import dataset
+
+```{r}
+#df <- read.csv('C:/Users/Tymoteusz/Desktop/DataValorisation/Project/Levels_Fyi_Salary_Data.csv')
+df <- read.csv('C:/Users/ltcmu/OneDrive/Documentos/Master/Data Valorisation/Proyecto/Levels_Fyi_Salary_Data.csv')
+```
+
+# Data preprocessing
+
+In this section, we do the data preprocessing of each variable:
+
+-   Eliminate variables that do not contain any values for all the records, or the ones that are irrelevant
+
+```{r}
+df <- subset(df, select = -c(rowNumber,
+                             Some_College,
+                             Highschool,
+                             tag,
+                             otherdetails,
+                             dmaid, 
+                             cityid,
+                             stockgrantvalue,
+                             level)
+             )
+```
+
+-   Split country location into states and cities
+
+```{r}
+for (i in 1:length(df$location)) {
+  aux <- strsplit(df$location[i], ", ")[[1]]
+  if(length(aux) > 2){
+    df$country[i] = aux[3]
+  }
+  else{
+    df$country[i] = "US" # American records contain only city and state. Other records are splitted into 3
+  }
+  df$state[i] <- aux[2]
+  df$city[i] <- aux[1]
+}
+```
+
+-   Create a continent variable using a lookup table to match countries with their continents
+
+```{r}
+country_continent <- data.frame(
+  country <- c("US", "United Kingdom", "Ireland", "India", "Belarus", "Canada", "Russia", "Netherlands", "Switzerland", "Singapore", "Germany", "Japan", "Sweden", "Australia", "United States", "Israel", "Poland", "China", "Austria", "Luxembourg", "Czech Republic", "France", "Pakistan", "New Zealand", "Denmark", "Hong Kong (SAR)", "South Africa", "Spain", "United Arab Emirates", "Hungary", "Brazil", "Bulgaria", "Philippines", "Indonesia", "Puerto Rico", "Taiwan", "Romania", "Mexico", "Costa Rica", "Marshall Islands", "Vietnam", "Panama", "Argentina", "Norway", "Moldova", "Estonia", "Kenya", "Turkey", "Italy", "Lithuania", "Nigeria", "Korea", "Ukraine", "Jordan", "Thailand", "Colombia", "Serbia", "Portugal", "Guatemala", "Yugoslavia", "Uruguay", "Slovakia", "Bangladesh", "Finland", "Chile", "Malaysia", "Latvia", "Saudi Arabia", "Peru", "Netherlands Antilles", "Belgium", "Burma", "Qatar", "Ghana", "Kazakhstan", "Uzbekistan", "Armenia", "Morocco", "Iraq", "Trinidad and Tobago", "Egypt"),
+  continent <- c("North America", "Europe", "Europe", "Asia", "Europe", "North America", "Europe", "Europe", "Europe", "Asia", "Europe", "Asia", "Europe", "Oceania", "North America", "Asia", "Europe", "Asia", "Europe", "Europe", "Europe", "Europe", "Asia", "Oceania", "Europe", "Asia", "Africa", "Europe", "Asia", "Europe", "South America", "Europe", "Asia", "Asia", "North America", "Asia", "Europe", "North America", "North America", "Oceania", "Asia", "North America", "South America", "Europe", "Europe", "Europe", "Africa", "Europe", "Europe", "Europe", "Africa", "Asia", "Europe", "Asia", "Asia", "South America", "Europe", "Europe", "North America", "Europe", "South America", "Europe", "Asia", "Europe", "South America", "Asia", "Europe", "Asia", "South America", "North America", "Europe", "Asia", "Asia", "Africa", "Asia", "Asia", "Asia", "Africa", "Asia", "North America", "Africa")
+)
+
+# We add a continent variable to df, using our lookup table
+df$continent <- country_continent$continent[match(df$country, country_continent$country)]
+```
+
+-   Extract the year value
+
+```{r}
+df$timestamp <- sapply(strsplit(as.character(df$timestamp), " "), `[`, 1) # First we filter out the time - we will not use it
+sapply(strsplit(df$timestamp ,"/"), `[`, 3) -> df$timestamp # We retrieve the year
+
+timestamp_proportions <- 100*table(df$timestamp)/length(df$timestamp)
+sort(timestamp_proportions)
+```
+
+-   Unify names that correspond to the same company
+
+```{r}
+tolower(df$company)->df$company
+df[grepl("moody", df$company),]["company"] <- "moody"
+df[grepl("microsoft", df$company),]["company"] <- "microsoft"
+df[grepl("amazon", df$company),]["company"] <- "amazon"
+df[grepl("deloitte", df$company),]["company"] <- "deloitte"
+df[grepl("verizon", df$company),]["company"] <- "verizon"
+df[grepl("apple", df$company),]["company"] <- "apple"
+df[grepl("genomics", df$company),]["company"] <- "genomics"
+df[grepl("accenture", df$company),]["company"] <- "accenture"
+df[grepl("adobe", df$company),]["company"] <- "adobe"
+df[grepl("alibaba", df$company),]["company"] <- "alibaba"
+df[grepl("akamai", df$company),]["company"] <- "akamai"
+df[grepl("walmart", df$company),]["company"] <- "walmart"
+df[grepl("jpmorgan", df$company),]["company"] <- "jpmorgan"
+df[grepl("google", df$company),]["company"] <- "google"
+df[grepl("facebook", df$company),]["company"] <- "facebook"
+df[grepl("oracle", df$company),]["company"] <- "oracle"
+df[grepl("intel", df$company),]["company"] <- "intel"
+df[grepl("salesforce", df$company),]["salesforce"] <- "intel"
+```
+
+-   Select the companies with the highest frequency
+
+```{r}
+company_proportions <- 100*table(df$company)/length(df$company)
+sort(company_proportions,decreasing=TRUE)[1:9]
+
+selected_companies <- sort(company_proportions,decreasing=TRUE)[1:9]
+df$company[!(df$company %in% names(selected_companies))] <- "Other" # Now we change name of all companies that do not belong to top 9 to "Other"
+company_proportions <- 100*table(df$company)/length(df$company)
+selected_companies <- sort(company_proportions,decreasing=TRUE)[1:10] # And include it as the 10th one 
+```
+
+-   Filter outliers of the variable totalyearlycompensation
+
+```{r}
+min(df$totalyearlycompensation)
+max(df$totalyearlycompensation)
+sum(is.na(df["totalyearlycompensation"])) # There should be no records with missing salary 
+df <- df[df$totalyearlycompensation <= 2500000,] # We filter out people that earn more than 2.5 million $ per year as outliers
+max(df$totalyearlycompensation)
+```
+
+-   Select the main titles and define the rest as "Other"
+
+```{r}
+title_proportions <- 100*table(df$title)/length(df$title)
+sort(title_proportions,decreasing=TRUE)[1:5]
+title_proportions <- sort(title_proportions,decreasing=TRUE)[1:5]
+df$title[!(df$title %in% names(title_proportions))] <- "Other"
+```
+
+# Plots
+
+In this section, we plot several graphs to get different insights.
+
+-   Plots the companies that the employees were hired in
+
+```{r}
+unique(df$company)
+q <- ggplot(data.frame(df$company), aes(x=df$company)) + geom_bar(fill = "steelblue")
+q + theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1)) + 
+  ggtitle("Companies") + xlab("Company Name")
+q
+```
+
+-   Visualization of total yearly compensation and years of experience
+
+```{r}
+d <- ggplot(df, aes(x = totalyearlycompensation, y = yearsofexperience)) + 
+  geom_point()
+d + theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1))
+```
+
+-   Plots for countries versus companies
+
+```{r}
+b <- subset(df, country %in% c("US", "India", "United Kingdom", "Germany", "Canada"))
+unique(b$country)
+q <- ggplot(data.frame(b$country), aes(x=b$country)) + geom_bar()
+q + theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1))
+a <- subset(df, country != "US")
+c <- ggplot(a, aes(x=country)) + geom_bar()
+c + theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1))
+```
+
+-   Scatter plot of location against country
+
+```{r}
+d <- ggplot(a, aes(x = company, y = country)) + 
+  geom_point()
+d + theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1))
+df <- subset(df, select = -c(location))
+```
+
+-   Histogram with years of experience
+
+```{r}
+df <- df[df$yearsofexperience < 60,]
+hist(df$yearsofexperience, main = "Years of experience", xlab="Years of experience", col=palette1(5))
+```
+
+-   Histogram with yearsatcompany
+
+```{r}
+min(df$yearsatcompany)
+max(df$yearsatcompany)
+sum(is.na(df$yearsatcompany))
+hist(df$yearsatcompany, main = "Years at company", xlab="Years at comapny",xlim=c(0,40), col=palette3(5))
+```
+
+-   Histogram with basesalary
+
+```{r}
+min(df$basesalary)
+max(df$basesalary)
+summary(df$basesalary)
+count(df[df$basesalary > 1000000,])
+
+df <- df[df$basesalary <= 1000000,]
+hist(df$basesalary, main = "Base salary", xlab="Base salary", col=palette2(5))
+d <- ggplot(df, aes(x = basesalary, y = yearsofexperience)) + 
+  geom_point()
+d + theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1))
+d
+```
+
+### Eliminating NA for Race,Education and Gender
+
+Maintaining samples with missing race,education and gender was useful for our analysis and plotting, as there. For modelling, it is necessary to eliminate
+
+```{r}
+# It occurs that we should drop the records with NA values for the following fields
+df[!is.na(df$gender),]
+df <- df[!is.na(df$gender),]
+df <- df[!is.na(df$Education),]
+df <- df[!is.na(df$Race),]
+```
+
+# One-hot encoding
+
+The majority of our variables are categorical, so we one-hot encode them to be able to perform a deeper analysis with them (see second delivery notebook).
+
+```{r}
+names(df)
+
+# Selecting the variables
+df_onehot <-df[c("Bachelors_Degree","Masters_Degree","Doctorate_Degree","Race_Asian","Race_White","Race_Hispanic","Race_Black","Race_Two_Or_More","gender","yearsofexperience","yearsatcompany","continent","title","company","totalyearlycompensation","Education")]
+#Lowercase titles
+names(df_onehot)<- tolower(names(df_onehot))
+names(df_onehot)
+
+## ONE-HOT ENCODING
+
+## Education
+
+df_onehot<-rename(df_onehot,  ed_bachelor=bachelors_degree)
+df_onehot<-rename(df_onehot, ed_master=masters_degree)
+df_onehot<-rename(df_onehot,  ed_doctor=doctorate_degree)
+
+
+# We will have only 4 columns for education, if someone is not, bsc, msc or phd he is other
+df_onehot['ed_other'] = replicate(nrow(df_onehot), 0) # We create new column of zeros
+df_onehot <- within(df_onehot, ed_other[df_onehot$ed_bachelor==0 & df_onehot$ed_master == 0 & df_onehot$ed_doctor ==0] <- 1)
+# We verify if we do not have unclassified records
+stopifnot(nrow(df_onehot[df_onehot$ed_bachelor==0 & 
+                           df_onehot$ed_master==0 & 
+                           df_onehot$ed_doctor==0 & 
+                           df_onehot$ed_other==0,])== 0)
+
+#We will keep the not one-hot-encoded "Education" variable for a further analysis of gender and race impacting education in the 2nd delivery notebook.
+
+
+# Gender
+# We filter out all records that do not contain valid gender
+unique(df_onehot$gender)
+df_onehot <- subset(df_onehot, gender !="Title: Senior Software Engineer")
+unique(df_onehot$gender)
+df_onehot %>% 
+  mutate(gender_female = ifelse(gender=='Female', 1, 0),
+         gender_male = ifelse(gender=='Male', 1, 0),
+         gender_other = ifelse(gender=='Other', 1, 0),
+  )  -> df_onehot
+
+#we eliminate the variable gender now that it is encoded
+df_onehot <-subset(df_onehot, select = -c(gender) )
+
+
+# Company
+unique(df_onehot$company)
+df_onehot %>% 
+  mutate(com_oracle = ifelse(company=="oracle", 1, 0),
+         com_other = ifelse(company=="Other", 1, 0),
+         com_amazon= ifelse(company=="amazon", 1, 0),
+         com_apple = ifelse(company=="apple", 1, 0),
+         com_salesforce = ifelse(company=="salesforce", 1, 0),
+         com_facebook = ifelse(company=="facebook", 1, 0),
+         com_google = ifelse(company=="google", 1, 0),
+         com_intel = ifelse(company=="intel", 1, 0),
+         com_microsoft = ifelse(company=="microsoft", 1, 0),
+         com_ibm = ifelse(company=="ibm", 1, 0),
+  )  -> df_onehot
+stopifnot(nrow(df_onehot[df_onehot$com_amazon==0 &
+                           df_onehot$com_apple==0 &
+                           df_onehot$com_facebook==0 &
+                           df_onehot$com_google==0 &
+                           df_onehot$com_ibm==0 &
+                           df_onehot$com_intel==0 &
+                           df_onehot$com_microsoft==0 &
+                           df_onehot$com_oracle==0 &
+                           df_onehot$com_other==0 &
+                           df_onehot$com_salesforce==0,])
+          ==0)
+#we eliminate the variable now that it is encoded
+df_onehot <-subset(df_onehot, select = -c(company) )
+
+# Titles
+unique(df_onehot$title)
+df_onehot %>% 
+  mutate(title_pmanager = ifelse(title=="Product Manager", 1, 0),
+         title_sweng = ifelse(title=="Software Engineer", 1, 0),
+         title_swengman = ifelse(title=="Software Engineering Manager", 1, 0),
+         title_datasci = ifelse(title=="Data Scientist", 1, 0),
+         title_other = ifelse(title=="Other", 1, 0),
+         title_hweng = ifelse(title=="Hardware Engineer", 1, 0),
+  )  -> df_onehot
+stopifnot(nrow(df_onehot[df_onehot$title_datasci==0 & 
+                           df_onehot$title_hweng==0 & 
+                           df_onehot$title_other==0 & 
+                           df_onehot$title_pmanager==0 & 
+                           df_onehot$title_sweng==0 & 
+                           df_onehot$title_swengman==0,])==0)
+#we eliminate the variable now that it is encoded
+df_onehot <-subset(df_onehot, select = -c(title))
+
+# Continents
+unique(df_onehot$continent)
+df_onehot %>% 
+  mutate(continent_namerica = ifelse(continent=="North America", 1, 0),
+         continent_samerica = ifelse(continent== "South America", 1, 0),
+         continent_africa = ifelse(continent==  "Africa" , 1, 0),
+         continent_oceania = ifelse(continent== "Oceania", 1, 0),
+         continent_asia = ifelse(continent=="Asia", 1, 0),
+         continent_europe = ifelse(continent=="Europe", 1, 0),
+  )  -> df_onehot
+
+#we eliminate the variable now that it is encoded
+df_onehot <-subset(df_onehot, select = -c(continent) )
+
+```
+
+## Exporting the dataset
+
+```{r}
+names(df_onehot)
+
+write.csv(df_onehot, '/Users/ltcmu/OneDrive/Documentos/Master/Data Valorisation/Proyecto/clean_salary_data.csv', row.names=FALSE)
+
+```
