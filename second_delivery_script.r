@@ -323,7 +323,7 @@ df_onehot <-subset(df_onehot, select = -c(continent) )
 # Final set of columns, we one more time check if it is clean
 names(df_onehot)
 sum(is.na(df_onehot))
-
+write.csv(df_onehot, "C:/Users/Tymoteusz/Desktop/Data_Valorisation/full_one_hot_data.csv", row.names=FALSE)
 
 # TC: Why would we choose those specific columns?
 #df_categorical <-df_onehot[c("bachelors_degree","totalyearlycompensation","ed_master","ed_doctor","race_asian","race_white","race_hispanic","race_black","race_two_or_more","gender_female","gender_male","gender_other","year_2018","year_2019","year_2020","com_oracle","com_amazon","com_apple","com_salesforce","com_facebook","com_google","com_intel",             "com_cisco","com_ibm","title_pmanager","title_sweng","title_swengman","title_datasci","title_hweng","continent_namerica","continent_samerica","continent_africa","continent_oceania","continent_asia")]
@@ -373,7 +373,8 @@ y_pred_RT = predict(newdata=test, object=classifier_RT)
 # Comparing the chosen accuracy metric (RMSE) between regression tree and random forest 
 rmse_RF = sqrt(MSE(y_pred_RF, test$totalyearlycompensation)) # ~10k
 rmse_RT = sqrt(MSE(y_pred_RT, test$totalyearlycompensation)) # ~100k
-
+sprintf("RMSE for the regression tree method: %s", rmse_RT)
+sprintf("RMSE for the random forest method: %s", rmse_RF)
 
 
 ## Alternative methods for finding the cp parameter - the optimal one - for building the trees

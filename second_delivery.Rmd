@@ -1,0 +1,430 @@
+---
+title: "Second delivery Notebook - How do education and social features affect STEM salaries? "
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+---
+
+## Introduction
+
+This notebook is the second delivery for Data Valorization course, in Université Cote de Azur, Nice (2023) . You can watch the explanation for the aim of the project and the data cleaning [here](https://www.youtube.com/watch?v=QIKk9Wc0Io89).
+
+-   Business goal: Analyze how social features( race, gender)and education affect STEM salaries.
+
+-   Technical goal: Perform regression to predict total yearly income
+
+We will perform the regression with the following models, looking to obtain the lowest RSME:
+
+-   Linear Regression
+
+-   SVR
+
+-   Regression Tree
+
+-   Random Forest
+
+## Authors
+
+Tymoteusz Igor Ciesielski [*tymoteusz-igor.ciesielski\@etu.univ-cotedazur.fr*](mailto:tymoteusz-igor.ciesielski@etu.univ-cotedazur.fr){.email}, [*tymotheus.c\@gmail.com*](mailto:tymotheus.c@gmail.com){.email}
+
+Lucia Trillo Carreras [*lucia.trillo-carreras\@etu.univ-cotedazur.fr*](mailto:lucia.trillo-carreras@etu.univ-cotedazur.fr){.email}
+
+Ewa Kupczyk [*ewa.kupczyk\@etu.univ-cotedazur.fr*](mailto:ewa.kupczyk@etu.univ-cotedazur.fr){.email}
+
+Marina Bueno Garcia [*marina.bueno-garcia\@etu.univ-cotedazur.fr*](mailto:marina.bueno-garcia@etu.univ-cotedazur.fr){.email}
+
+## Libraries
+
+```{r}
+library(tidyverse)
+library(ggplot2)
+library(plotly) #interactive visualisation
+library(lattice) #data exploration (corellations)
+library(dplyr)
+library(countrycode) # For adding continent variable
+library(corrplot)
+library(rpart)
+library(rpart.plot)
+#library(randomForest)
+#library(caTools)
+#library(MLmetrics)
+library(e1071)
+```
+
+## Data
+
+The salary dataset we have used is scraped from Levels Fyi, a US-based online service for compensation comparison across companies in Tech. It contained 62 642 samples and 29 variables, predominantly categorical. We import our cleaned dataset from the first delivery, where we performed the preprocessing and one-hot encoding.
+
+We import our cleaned dataset from the first delivery:
+
+```{r}
+df_onehot <- read.csv('C:/Users/ltcmu/OneDrive/Documentos/Master/Data Valorisation/Proyecto/clean_salary_data.csv')
+#df_onehot <- read.csv('C:/Users/Tymoteusz/Desktop/Data_Valorisation/clean_salary_data.csv')
+#df_onehot <- read.csv('/Users/marinabuenogarcia/Downloads/clean_salary_data.csv')
+df_onehot <- na.omit(df_onehot) #Ensure we dont have NA values
+```
+
+We will feed our regression models with the one-hot encoded variables:
+
+```{r}
+df_onehot
+dim(df_onehot)
+```
+
+We define our output variable Y - *totalyearlycompensation*, meaning how much a person X earns during the whole year:
+
+```{r}
+Y <- df_onehot[c("totalyearlycompensation")]
+df_onehot <- subset(df_onehot, select = -c(totalyearlycompensation))
+```
+
+We split the data into training and testing sets:
+
+```{r}
+set.seed(123)
+trainIndex <- sample(1:nrow(df_onehot), 0.7 * nrow(df_onehot))
+Ytrain <- Y[trainIndex,]
+trainData <- df_onehot[trainIndex,]
+Ytest <- Y[-trainIndex,]
+testData <- df_onehot[-trainIndex,]
+```
+
+## Linear Regression
+
+Fit the linear regression model using the training and predict using the testing data:
+
+```{r}
+linearModel <- lm(Ytrain ~ ., data = trainData)
+predictions <- predict(linearModel, newdata = testData)
+```
+
+Evaluate our model plotting the residuals and calculating the RMSE:
+
+```{r}
+residuals <- Ytest - predictions
+plot(residuals ~ predictions, xlab = "Predictions", ylab = "Residuals",
+     main = "Residuals vs. Predictions")
+abline(h = 0, col = "red")
+
+rmse <- sqrt(mean(residuals^2))
+R2_LR <- 1 - sum((residuals)^2) / sum((Ytest - mean(Ytest))^2)
+
+cat("Root mean Squared Error of Linear Regression:", rmse, "\n")
+cat("R squared coefficient of Linear Regression:", R2_LR, "\n")
+
+summary(Y)
+```
+
+Finally, we analyze the model:
+
+```{r}
+summary(linearModel)
+```
+
+## SVR
+
+SVR is a type of supervised machine learning algorithm used for classification and regression analysis.
+
+We implement 6 different models:
+
+-   Linear kernel + nu-regression
+
+```{r}
+svmModel_nu <- svm(Ytrain ~ ., data = trainData, kernel = "linear", type = "nu-regression")
+
+summary(svmModel_nu)
+coef(svmModel_nu)
+
+# Test your SVM model on the testing set
+svmPred_nu <- predict(svmModel_nu, testData)
+
+# Evaluate the accuracy of your SVM model: RMSE
+RMSE_nu <- sqrt(mean((svmPred_nu - Ytest)^2))
+cat("\n Root Mean Squared Error:", RMSE_nu, "\n")
+```
+
+-   Linear kernel + eps-regression
+
+```{r}
+svmModel_eps <- svm(Ytrain ~ ., data = trainData, kernel = "linear", type="eps-regression")
+summary(svmModel_eps)
+coef(svmModel_eps)
+svmPred_eps <- predict(svmModel_eps, testData)
+RMSE_eps <- sqrt(mean((svmPred_eps - Ytest)^2))
+cat("\n Root Mean Squared Error:", RMSE_eps, "\n")
+```
+
+-   Radial kernel + nu-regression
+
+```{r}
+svmModel_nu_ra <- svm(Ytrain ~ ., data = trainData, kernel = "radial",type = "nu-regression")
+summary(svmModel_nu_ra)
+svmPred_nu_ra <- predict(svmModel_nu_ra, testData)
+RMSE_nu_ra <- sqrt(mean((svmPred_nu_ra - Ytest)^2))
+cat("\n Root Mean Squared Error:", RMSE_nu_ra, "\n")
+```
+
+-   Radial kernel + eps-regression
+
+```{r}
+svmModel_eps_ra <- svm(Ytrain ~ ., data = trainData, kernel = "radial", type = "eps-regression")
+summary(svmModel_eps_ra)
+svmPred_eps_ra <- predict(svmModel_eps_ra, testData)
+RMSE_eps_ra <- sqrt(mean((svmPred_eps_ra - Ytest)^2))
+cat("\n Root Mean Squared Error:", RMSE_eps_ra, "\n")
+```
+
+-   Polynomial kernel + nu-regression
+
+```{r}
+svmModel_nu_po <- svm(Ytrain ~ ., data = trainData, kernel = "polynomial", type = "nu-regression")
+summary(svmModel_nu_po)
+svmPred_nu_po <- predict(svmModel_nu_po, testData)
+RMSE_nu_po <- sqrt(mean((svmPred_nu_po - Ytest)^2))
+cat("\n Root Mean Squared Error:", RMSE_nu_po, "\n")
+```
+
+-   Polynomial kernel + eps-regression
+
+```{r}
+svmModel_eps_po <- svm(Ytrain ~ ., data = trainData, kernel = "polynomial", type = "eps-regression")
+summary(svmModel_eps_po)
+svmPred_eps_po <- predict(svmModel_eps_po, testData)
+RMSE_eps_po <- sqrt(mean((svmPred_eps_po - Ytest)^2))
+cat("\n Root Mean Squared Error:", RMSE_eps_po, "\n")
+
+```
+
+This graph compares the real salary values and predictions for the four models:
+
+```{r}
+# Create a data frame with the scaled salaries and predictions
+dfgraph <- data.frame(scaled_salaries = Ytest, pred_nu =svmPred_nu, pred_eps =svmPred_eps,pred_nu_ra=svmPred_nu_ra,pred_eps_ra=svmPred_eps_ra)
+
+# Sort the data frame by the scaled salaries for plotting
+dfgraph <- dfgraph[order(dfgraph$scaled_salaries), ]
+
+# Create a line plot of the scaled salaries and predictions
+
+plot_ly(dfgraph, x = ~scaled_salaries) %>%
+ add_lines(y = ~pred_eps, name = "Linear kernel + nu-regression", line = list(color = "red", width = 2)) %>%
+  add_lines(y = ~pred_nu_ra, name = "Linear kernel + eps-regression", line = list(color = "green", width = 2)) %>%
+  add_lines(y = ~pred_eps_ra, name = "Radial kernel + nu-regression", line = list(color = "blue", width = 2)) %>%
+  add_lines(y = ~pred_eps_ra, name = "Radial kernel + eps-regression", line = list(color = "yellow", width = 2)) %>%
+  layout(xaxis = list(title = "Real scaled Salaries"), yaxis = list(title = "Predicted scaled Salaries"), ylim = c(0, 6))
+
+
+```
+
+The model with the lowest RMSE is svmModel_nu_ra (radial kernel + nu-regression), followed closely by svmModel_eps_ra (radial kernel + eps-regression).
+
+The residual plot of the best model is:
+
+```{r}
+residuals <- Ytest - svmPred_nu_ra
+plot(svmPred_nu_ra, residuals, main="Residual Plot", xlab="Predicted Values", ylab="Residuals")
+abline(h = 0, col = "red")
+```
+
+And the Predicted vs Actual Values graph is:
+
+```{r}
+lims <- range(c(Ytest, svmPred_nu_ra))
+plot(Ytest, svmPred_nu_ra, main = "Predicted vs Actual Values (radial + nu regression)", xlab = "Actual Values", ylab = "Predicted Values", xlim = lims, ylim = lims)
+abline(0, 1, col = "red")
+```
+
+To have an idea of how good/bad our results are, let's have a look at the summary of the output variable:
+
+```{r}
+summary(Ytest)
+```
+
+We calculate the R-squared value of our best model:
+
+```{r}
+R2_nu_ra <- 1 - sum((Ytest - svmPred_nu_ra)^2) / sum((Ytest - mean(Ytest))^2)
+
+
+cat("Root mean Squared Error of SVR:", RMSE_nu_ra, "\n")
+cat("R squared coefficient of SVR:", R2_nu_ra, "\n")
+
+```
+
+## Regression Trees
+
+We continued analysis using the regression trees and random forest methods:
+
+```{r}
+full_tree <- rpart(Ytrain~., data=trainData, method='anova')
+rpart.plot(full_tree)
+```
+
+For all the trees we have tried to fine tune the parameters in order to obtain the lowest possible error and to avoid the overfitting. At the end we have obtained the smallest error (RMSE) for the trees that we kept the parameters set by default. Below we show as the example one of our trials:
+
+```{r}
+## Attempts in  finding the cp parameter - the optimal one - for building the trees
+## Calculated according to the lab 8
+
+
+library(MLmetrics)
+
+alt_full_tree <- rpart( Ytrain~., 
+                     data = trainData, 
+                     method='anova', 
+                     control = rpart.control(
+                       xval = 10, # number of cross-validations
+                       minbucket = 2, # the minimum number of observations in any terminal (leaf) node
+                       cp = 0.0)
+)
+optimalCp = alt_full_tree$cptable[which.min(alt_full_tree$cptable[,4]),1]
+alt_full_tree_Optimal <- prune(alt_full_tree, cp=optimalCp)
+#Plot the decision tree
+rpart.plot(alt_full_tree_Optimal,type=3)
+
+y_pred_tunedtree = predict(newdata=testData, object=alt_full_tree)
+rmse_tunedtree = sqrt(MSE(y_pred_tunedtree, Ytest)) # ~10k
+sprintf("RMSE for the tunedtree: %s", rmse_tunedtree)
+```
+
+Moreover, we build a tree only based on the social features: race, gender, education. Manipulating the default cp we obtained the best result:
+
+```{r}
+social_tree <- rpart( Ytrain ~ ed_master+ed_bachelor+ed_doctor+ed_other+
+                  race_asian+race_hispanic+race_white+race_black+race_two_or_more+
+                  gender_female+gender_male+gender_other,
+                  data=trainData, method='anova', control = rpart.control(cp = 0.005))
+rpart.plot(social_tree)
+```
+
+As it was the most influential feature, we continue by removing education from the social features:
+
+```{r}
+non_ed_tree <- rpart(Ytrain~race_asian+ race_hispanic+race_white+ race_black+ race_two_or_more+
+                      gender_female+ gender_other + gender_male,
+                     data=trainData, method='anova', control = rpart.control(cp = 0.0005))
+rpart.plot(non_ed_tree)
+```
+
+As an extension, we also implement **Random Forest** analysis:
+
+```{r}
+classifier_RF = randomForest(x = trainData, y= Ytrain, ntree=50, keep.forest=TRUE)
+y_pred_RF = predict(newdata=testData, object=classifier_RF)
+
+classifier_RT <- rpart(Ytrain~., data=trainData, method="anova" )
+y_pred_RT = predict(newdata=testData, object=classifier_RT)
+```
+
+Comparing the chosen accuracy metric (RMSE) between regression tree and random forest:
+
+```{r}
+rmse_RF = sqrt(MSE(y_pred_RF, Ytest)) # ~10k
+rmse_RT = sqrt(MSE(y_pred_RT, Ytest)) # ~100k
+R2_RF <- 1 - sum((Ytest - y_pred_RF)^2) / sum((Ytest - mean(Ytest))^2)
+R2_RT <- 1 - sum((Ytest - y_pred_RT)^2) / sum((Ytest - mean(Ytest))^2)
+```
+
+Show all the metrics:
+
+```{r}
+sprintf("RMSE for the regression tree method: %s", rmse_RT)
+sprintf("R squared score for the  regression tree method: %s", R2_RT)
+sprintf("RMSE for the random forest method: %s", rmse_RF)
+sprintf("R squared score for the random forest method: %s", R2_RF)
+
+```
+
+## Predicting our salaries using Random Forest
+
+As aspiring data scientists, we wanted to know what our future salaries could look like. If properly implemented and tuned, this tool could be very useful for prospective STEM professionals to obtain a reference of what salary to ask for in job interviews, taking into account all variables discussed, including their education and professional careers. It can also be useful to choose a specialization, and a place to work to obtain the best possible salary.
+
+Moreover, as part of any minority, it is useful to be aware of the effect of prejudice in prospective salaries, to be able to ask for a fair compensation.
+
+We will begin by creating a dataframe with our characteristics:
+
+```{r}
+
+# Ewa, Marina, Tymoteusz, Lucía
+ed_bachelor <- c(0,0,0,0)
+ed_doctor <- c(0,0,0,0)
+ed_other <- c(0,0,0,0)
+ed_master <- c(1,1,1,1)
+
+race_asian <- c(0,0,0,0)
+race_hispanic <- c(0,0,0,0)
+race_black <- c(0,0,0,0)
+race_two_or_more <- c(0,0,0,0)
+race_white <- c(1,1,1,1)
+
+yearsofexperience <- c(1,0,2,3)
+yearsatcompany <- c(0,0,0,0)
+
+gender_female <- c(1,1,0,1)
+gender_male <- c(0,0,1,0)
+gender_other <- c(0,0,0,0)
+
+com_oracle <- c(0,0,0,0)
+com_other <- c(1,0,1,1)
+com_amazon <- c(0,0,0,0)
+com_apple <- c(0,0,0,0)
+com_salesforce <- c(0,0,0,0)
+com_facebook <- c(0,0,0,0)
+com_google <- c(0,0,0,0)
+com_intel <- c(0,0,0,0)
+com_microsoft <- c(0,0,0,0)
+com_ibm <- c(0,0,0,0)
+
+title_pmanager <- c(0,0,0,0)
+title_sweng <- c(0,0,1,0)
+title_swengman <- c(0,0,0,0)
+title_datasci <- c(1,1,0,1)
+title_other <- c(0,0,0,0)
+title_hweng <- c(0,0,0,0)
+
+continent_namerica <- c(0,0,0,0)
+continent_samerica <- c(0,0,0,0)
+continent_africa <- c(0,0,0,0)
+continent_oceania <- c(0,0,0,0)
+continent_asia <- c(0,0,0,0)
+continent_europe <- c(1,1,1,1)
+
+
+#We include the characteristics in a dataframe
+teamcharacteristics <- data.frame(ed_bachelor,ed_master,ed_other,ed_doctor,race_asian,race_white,race_hispanic,race_black,race_two_or_more,yearsofexperience,yearsatcompany,gender_female,gender_other,com_oracle,com_other,com_amazon,com_apple,com_salesforce,com_facebook,com_google,com_intel,com_microsoft,com_ibm,title_pmanager,title_sweng,title_swengman,title_datasci,title_other,title_hweng,continent_namerica,continent_samerica,continent_africa,continent_oceania,continent_asia,continent_europe,gender_male)
+teamcharacteristics
+
+names<- c('Marina','Ewa','Tymo','Lucia')
+y_team_salaries = predict(newdata=teamcharacteristics, object=classifier_RF)
+
+
+teampredictions <- data.frame(names,y_team_salaries)
+teampredictions
+```
+
+## Conclusions
+
+As a summary we decided to gather all the metrics we used to evaluate the models and compare performance of the models:
+
+| Model                               | RMSE      | R-squared |
+|-------------------------------------|-----------|-----------|
+| Linear Regression                   | 91,325.35 | 0.4656    |
+| SVR (radial kernel + nu-regression) | 90,012.3  | 0.4809    |
+| Regression Tree                     | 89,007.07 | 0.3410    |
+| Random forest                       | 12,439.68 | 0.4924    |
+
+Average salary for all the people in our dataset is 197,425 USD. Linear Regression, SVR and Regression Trees models all have on average 90k RMSE, this means on average 46% error in the prediction of a salary. Due to such high inaccuracies, the abovementioned methods are not good predictors for this problem.\
+However the last model, Random Forest that we created has around 12k RMSE, meaning average error of 6%. This is a much better performance, and in our opinion is a good predictor. Due to the relatively high accuracy, we see its real value for the users and a potential business value.
+
+## References
+
+-   <https://uc-r.github.io/regression_trees>
+
+-   <https://en.wikipedia.org/wiki/Random_forest>
+
+-   <https://www.r-bloggers.com/2021/04/random-forest-in-r/>
+
+-   <https://www.geeksforgeeks.org/random-forest-approach-for-regression-in-r-programming/>
+
+
