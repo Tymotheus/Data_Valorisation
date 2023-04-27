@@ -26,7 +26,7 @@ We will perform the regression with the following models, looking to obtain the 
 
 ## Authors
 
-Tymoteusz Igor Ciesielski [*tymoteusz-igor.ciesielski\@etu.univ-cotedazur.fr*](mailto:tymoteusz-igor.ciesielski@etu.univ-cotedazur.fr){.email}
+Tymoteusz Igor Ciesielski [*tymoteusz-igor.ciesielski\@etu.univ-cotedazur.fr*](mailto:tymoteusz-igor.ciesielski@etu.univ-cotedazur.fr){.email}, [*tymotheus.c\@gmail.com*](mailto:tymotheus.c@gmail.com){.email}
 
 Lucia Trillo Carreras [*lucia.trillo-carreras\@etu.univ-cotedazur.fr*](mailto:lucia.trillo-carreras@etu.univ-cotedazur.fr){.email}
 
@@ -54,9 +54,9 @@ library(e1071)
 
 ## Data
 
-The salary dataset we have used is scraped from Levels Fyi, a US-based online service for compensation comparison across companies in Tech. It contained 62 642 samples and 29 variables, predominantly categorical. We import our cleaned dataset from the first delivery.that includes the preprocessing and one-hot encoding.
+The salary dataset we have used is scraped from Levels Fyi, a US-based online service for compensation comparison across companies in Tech. It contained 62 642 samples and 29 variables, predominantly categorical. We import our cleaned dataset from the first delivery, where we performed the preprocessing and one-hot encoding.
 
-We import our cleaned dataset from the first delivery
+We import our cleaned dataset from the first delivery:
 
 ```{r}
 df_onehot <- read.csv('C:/Users/ltcmu/OneDrive/Documentos/Master/Data Valorisation/Proyecto/clean_salary_data.csv')
@@ -65,21 +65,21 @@ df_onehot <- read.csv('C:/Users/ltcmu/OneDrive/Documentos/Master/Data Valorisati
 df_onehot <- na.omit(df_onehot) #Ensure we dont have NA values
 ```
 
-We will feed our regression models with the one-hot encoded variables
+We will feed our regression models with the one-hot encoded variables:
 
 ```{r}
 df_onehot
 dim(df_onehot)
 ```
 
-We define our output variable Y:
+We define our output variable Y - *totalyearlycompensation*, meaning how much a person X earns during the whole year:
 
 ```{r}
 Y <- df_onehot[c("totalyearlycompensation")]
 df_onehot <- subset(df_onehot, select = -c(totalyearlycompensation))
 ```
 
-We split the data into training and testing sets
+We split the data into training and testing sets:
 
 ```{r}
 set.seed(123)
@@ -92,7 +92,7 @@ testData <- df_onehot[-trainIndex,]
 
 ## Linear Regression
 
-Fit the linear regression model using the training and predict using the testing data.
+Fit the linear regression model using the training and predict using the testing data:
 
 ```{r}
 linearModel <- lm(Ytrain ~ ., data = trainData)
@@ -235,7 +235,7 @@ plot(Ytest, svmPred_nu_ra, main = "Predicted vs Actual Values (radial + nu regre
 abline(0, 1, col = "red")
 ```
 
-To have an idea of how good/bad our results are, let's have a look at the summary of the output variable
+To have an idea of how good/bad our results are, let's have a look at the summary of the output variable:
 
 ```{r}
 summary(Ytest)
@@ -254,14 +254,14 @@ cat("R squared coefficient of SVR:", R2_nu_ra, "\n")
 
 ## Regression Trees
 
-We continued analysis using the regression trees and random forest methods
+We continued analysis using the regression trees and random forest methods:
 
 ```{r}
 full_tree <- rpart(Ytrain~., data=trainData, method='anova')
 rpart.plot(full_tree)
 ```
 
-For all the trees we have tried to fine tune the parameters in order to obtain the lowest possible error and to avoid the overfitting. At the end we have obtained the smallest error (RMSE) for the trees that we kept the parameters set by default. Below we show as the example one of our trials.
+For all the trees we have tried to fine tune the parameters in order to obtain the lowest possible error and to avoid the overfitting. At the end we have obtained the smallest error (RMSE) for the trees that we kept the parameters set by default. Below we show as the example one of our trials:
 
 ```{r}
 ## Attempts in  finding the cp parameter - the optimal one - for building the trees
@@ -288,7 +288,7 @@ rmse_tunedtree = sqrt(MSE(y_pred_tunedtree, Ytest)) # ~10k
 sprintf("RMSE for the tunedtree: %s", rmse_tunedtree)
 ```
 
-Moreover, we build a tree only based on the social features: race, gender, education. Manipulating the default cp we obtained the best result.
+Moreover, we build a tree only based on the social features: race, gender, education. Manipulating the default cp we obtained the best result:
 
 ```{r}
 social_tree <- rpart( Ytrain ~ ed_master+ed_bachelor+ed_doctor+ed_other+
@@ -298,7 +298,7 @@ social_tree <- rpart( Ytrain ~ ed_master+ed_bachelor+ed_doctor+ed_other+
 rpart.plot(social_tree)
 ```
 
-We continue removing education from the social features:
+As it was the most influential feature, we continue by removing education from the social features:
 
 ```{r}
 non_ed_tree <- rpart(Ytrain~race_asian+ race_hispanic+race_white+ race_black+ race_two_or_more+
@@ -307,7 +307,7 @@ non_ed_tree <- rpart(Ytrain~race_asian+ race_hispanic+race_white+ race_black+ ra
 rpart.plot(non_ed_tree)
 ```
 
-We also implement Random Forest:
+As an extension, we also implement **Random Forest** analysis:
 
 ```{r}
 classifier_RF = randomForest(x = trainData, y= Ytrain, ntree=50, keep.forest=TRUE)
@@ -317,7 +317,7 @@ classifier_RT <- rpart(Ytrain~., data=trainData, method="anova" )
 y_pred_RT = predict(newdata=testData, object=classifier_RT)
 ```
 
-Comparing the chosen accuracy metric (RMSE) between regression tree and random forest
+Comparing the chosen accuracy metric (RMSE) between regression tree and random forest:
 
 ```{r}
 rmse_RF = sqrt(MSE(y_pred_RF, Ytest)) # ~10k
@@ -336,17 +336,13 @@ sprintf("R squared score for the random forest method: %s", R2_RF)
 
 ```
 
-```{r}
-
-```
-
 ## Predicting our salaries using Random Forest
 
-As aspiring data scientists, we wanted to know what our future salaries could look like. If properly implemented and tuned, this tool could be very useful for prospective STEM professionals to obtain a reference of what salary to ask for in job interviews, taking into account all variables discussed including their education and professional careers. It can also be useful to choose a specialization, and a place to work to obtain the best possible salary .
+As aspiring data scientists, we wanted to know what our future salaries could look like. If properly implemented and tuned, this tool could be very useful for prospective STEM professionals to obtain a reference of what salary to ask for in job interviews, taking into account all variables discussed, including their education and professional careers. It can also be useful to choose a specialization, and a place to work to obtain the best possible salary.
 
 Moreover, as part of any minority, it is useful to be aware of the effect of prejudice in prospective salaries, to be able to ask for a fair compensation.
 
-We will begin by creating dataframe with our characteristics:
+We will begin by creating a dataframe with our characteristics:
 
 ```{r}
 
@@ -395,7 +391,6 @@ continent_asia <- c(0,0,0,0)
 continent_europe <- c(1,1,1,1)
 
 
-
 #We include the characteristics in a dataframe
 teamcharacteristics <- data.frame(ed_bachelor,ed_master,ed_other,ed_doctor,race_asian,race_white,race_hispanic,race_black,race_two_or_more,yearsofexperience,yearsatcompany,gender_female,gender_other,com_oracle,com_other,com_amazon,com_apple,com_salesforce,com_facebook,com_google,com_intel,com_microsoft,com_ibm,title_pmanager,title_sweng,title_swengman,title_datasci,title_other,title_hweng,continent_namerica,continent_samerica,continent_africa,continent_oceania,continent_asia,continent_europe,gender_male)
 teamcharacteristics
@@ -408,27 +403,16 @@ teampredictions <- data.frame(names,y_team_salaries)
 teampredictions
 ```
 
-|                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
-|------------------------------------------------------------------------|
-| ed_bachelor,ed_master,ed_doctor,race_asian,race_white,race_hispanic,race_black,race_two_or_more,yearsofexperience,yearsatcompany,totalyearlycompensation,gender_female,gender_other,com_oracle,com_other,com_amazon,com_apple,com_salesforce,com_facebook,com_google,com_intel,com_microsoft,com_ibm,title_pmanager,title_sweng,title_swengman,title_datasci,title_other,title_hweng,continent_namerica,continent_samerica,continent_africa,continent_oceania,continent_asia,continent_europe |
-
-```         
-
-
-
-```
-
-\
-
-teamcharacteristics
-
-y_teamprediction_RF = predict(newdata=teamcharacteristics, object=classifier_RF)
-
 ## Conclusions
 
-| Model                               | RMSE     | R-squared |
-|-------------------------------------|----------|-----------|
-| Linear Regression                   | 91325.35 | 0.4656    |
-| SVR (radial kernel + nu-regression) | 90012.3  | 0.4809    |
-| Regression Tree                     | 89007.07 | 0.3410    |
-| Random forest                       | 12439.68 | 0.4924    |
+As a summary we decided to gather all the metrics we used to evaluate the models and compare performance of the models:
+
+| Model                               | RMSE      | R-squared |
+|-------------------------------------|-----------|-----------|
+| Linear Regression                   | 91,325.35 | 0.4656    |
+| SVR (radial kernel + nu-regression) | 90,012.3  | 0.4809    |
+| Regression Tree                     | 89,007.07 | 0.3410    |
+| Random forest                       | 12,439.68 | 0.4924    |
+
+Average salary for all the people in our dataset is 197,425 USD. Linear Regression, SVR and Regression Trees models all have on average 90k RMSE, this means on average 46% error in the prediction of a salary. Due to such high inaccuracies, the abovementioned methods are not good predictors for this problem.\
+However the last model, Random Forest that we created has around 12k RMSE, meaning average error of 6%. This is a much better performance, and in our opinion is a good predictor. Due to the relatively high accuracy, we see its real value for the users and a potential business value.
