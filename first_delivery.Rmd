@@ -284,6 +284,7 @@ df_onehot<-rename(df_onehot, ed_master=masters_degree)
 df_onehot<-rename(df_onehot,  ed_doctor=doctorate_degree)
 
 
+
 # We will have only 4 columns for education, if someone is not, bsc, msc or phd he is other
 df_onehot['ed_other'] = replicate(nrow(df_onehot), 0) # We create new column of zeros
 df_onehot <- within(df_onehot, ed_other[df_onehot$ed_bachelor==0 & df_onehot$ed_master == 0 & df_onehot$ed_doctor ==0] <- 1)
@@ -293,9 +294,8 @@ stopifnot(nrow(df_onehot[df_onehot$ed_bachelor==0 &
                            df_onehot$ed_doctor==0 & 
                            df_onehot$ed_other==0,])== 0)
 
-#We will keep the not one-hot-encoded "Education" variable for a further analysis of gender and race impacting education in the 2nd delivery notebook.
-
-
+#we eliminate the variable now that it is encoded
+df_onehot <-subset(df_onehot, select = -c(education) )
 # Gender
 # We filter out all records that do not contain valid gender
 unique(df_onehot$gender)

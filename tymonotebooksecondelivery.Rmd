@@ -65,16 +65,6 @@ df_onehot <- read.csv('C:/Users/ltcmu/OneDrive/Documentos/Master/Data Valorisati
 df_onehot <- na.omit(df_onehot) #Ensure we dont have NA values
 ```
 
-To conduct a later Decision Tree categorical analysis ,we will create a specific dataset for Education, and remove it for our core dataset.
-
-```{r}
-names(df_onehot)
-#create the education categorical dataset
-
-#remove it from the core dataset
-df_onehot <-subset(df_onehot, select = -c(education) )
-```
-
 We will feed our regression models with the one-hot encoded variables
 
 ```{r}
@@ -121,7 +111,7 @@ rmse <- sqrt(mean(residuals^2))
 R2_LR <- 1 - sum((residuals)^2) / sum((Ytest - mean(Ytest))^2)
 
 cat("Root mean Squared Error of Linear Regression:", rmse, "\n")
-cat("R suared coefficient of Linear Regression:", R2_LR, "\n")
+cat("R squared coefficient of Linear Regression:", R2_LR, "\n")
 
 summary(Y)
 ```
@@ -262,9 +252,8 @@ cat("R squared coefficient of SVR:", R2_nu_ra, "\n")
 
 ```
 
-## Regression Decision Trees and Random Forests
+## Regression Trees
 
-\
 We continued analysis using the regression trees and random forest methods
 
 ```{r}
@@ -272,7 +261,34 @@ full_tree <- rpart(Ytrain~., data=trainData, method='anova')
 rpart.plot(full_tree)
 ```
 
-First, we build a tree only based on the social features: race, gender, education
+For all the trees we have tried to fine tune the parameters in order to obtain the lowest possible error and to avoid the overfitting. At the end we have obtained the smallest error (RMSE) for the trees that we kept the parameters set by default. Below we show as the example one of our trials.
+
+```{r}
+## Attempts in  finding the cp parameter - the optimal one - for building the trees
+## Calculated according to the lab 8
+
+
+library(MLmetrics)
+
+alt_full_tree <- rpart( Ytrain~., 
+                     data = trainData, 
+                     method='anova', 
+                     control = rpart.control(
+                       xval = 10, # number of cross-validations
+                       minbucket = 2, # the minimum number of observations in any terminal (leaf) node
+                       cp = 0.0)
+)
+optimalCp = alt_full_tree$cptable[which.min(alt_full_tree$cptable[,4]),1]
+alt_full_tree_Optimal <- prune(alt_full_tree, cp=optimalCp)
+#Plot the decision tree
+rpart.plot(alt_full_tree_Optimal,type=3)
+
+y_pred_tunedtree = predict(newdata=testData, object=alt_full_tree)
+rmse_tunedtree = sqrt(MSE(y_pred_tunedtree, Ytest)) # ~10k
+sprintf("RMSE for the tunedtree: %s", rmse_tunedtree)
+```
+
+Moreover, we build a tree only based on the social features: race, gender, education. Manipulating the default cp we obtained the best result.
 
 ```{r}
 social_tree <- rpart( Ytrain ~ ed_master+ed_bachelor+ed_doctor+ed_other+
@@ -289,15 +305,6 @@ non_ed_tree <- rpart(Ytrain~race_asian+ race_hispanic+race_white+ race_black+ ra
                       gender_female+ gender_other + gender_male,
                      data=trainData, method='anova', control = rpart.control(cp = 0.0005))
 rpart.plot(non_ed_tree)
-```
-
-As an additional analysis we applied classification tree on non-one-hot-encoded data
-
-```{r}
-classification_tree <- rpart(Education~gender+
-                               Race_Asian+Race_White+Race_Two_Or_More+Race_Black+Race_Hispanic,
-              data=df_onehot, method='class')
-rpart.plot(classification_tree)
 ```
 
 We also implement Random Forest:
@@ -330,63 +337,7 @@ sprintf("R squared score for the random forest method: %s", R2_RF)
 ```
 
 ```{r}
-## Alternative methods for finding the cp parameter - the optimal one - for building the trees
-## Calculated according to the lab 8
-########
-## Alternative full one-hot data
 
-alt_full_tree <- rpart( Ytrain~., 
-                     data = trainData, 
-                     method='anova', # output is a categorical variable by asking for method=’class’
-                     control = rpart.control(
-                       xval = 10, # number of cross-validations
-                       minbucket = 2, # the minimum number of observations in any terminal (leaf) node
-                       cp = 0.0)
-)
-optimalCp = alt_full_tree$cptable[which.min(alt_full_tree$cptable[,4]),1]
-alt_full_tree_Optimal <- prune(alt_full_tree, cp=optimalCp)
-#Plot the decision tree
-rpart.plot(alt_full_tree_Optimal,type=3)
-
-y_pred_weirdtree = predict(newdata=testData, object=alt_full_tree)
-rmse_weirdtree = sqrt(MSE(y_pred_weirdtree, Ytest)) # ~10k
-sprintf("RMSE for the better tree: %s", rmse_weirdtree)
-```
-
-```{r}
-## Alternative data with all social features
-alt_social_tree <- rpart(totalyearlycompensation~ed_master+ed_other+ed_doctor+
-                           race_asian+ race_hispanic+ race_black+ race_two_or_more+
-                           gender_female+ gender_other,
-                        data = df_onehot, 
-                        method='anova', # output is a categorical variable by asking for method=’class’
-                        control = rpart.control(
-                          xval = 10, # number of cross-validations
-                          minbucket = 2, # the minimum number of observations in any terminal (leaf) node
-                          cp = 0.0)
-)
-optimalCp = alt_social_tree$cptable[which.min(alt_social_tree$cptable[,4]),1]
-alt_social_tree_Optimal <- prune(alt_social_tree, cp=optimalCp)
-#Plot the decision tree
-rpart.plot(alt_social_tree_Optimal,type=3)
-```
-
-```{r}
-## Alternative data with all social features except education
-alt_non_ed_tree <- rpart(totalyearlycompensation~race_asian+ race_hispanic+ race_black+ race_two_or_more+
-                           gender_female+ gender_other,
-                         data = df_onehot, 
-                         method='anova', # output is a categorical variable by asking for method=’class’
-                         control = rpart.control(
-                           xval = 10, # number of cross-validations
-                           minbucket = 2, # the minimum number of observations in any terminal (leaf) node
-                           cp = 0.0)
-)
-optimalCp = alt_non_ed_tree$cptable[which.min(alt_non_ed_tree$cptable[,4]),1]
-alt_non_ed_tree_Optimal <- prune(alt_non_ed_tree, cp=optimalCp)
-#Plot the decision tree
-rpart.plot(alt_non_ed_tree_Optimal,type=3)
-##########
 ```
 
 ## Predicting our salaries using Random Forest
@@ -458,21 +409,16 @@ teampredictions
 ```
 
 |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
-|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+|------------------------------------------------------------------------|
 | ed_bachelor,ed_master,ed_doctor,race_asian,race_white,race_hispanic,race_black,race_two_or_more,yearsofexperience,yearsatcompany,totalyearlycompensation,gender_female,gender_other,com_oracle,com_other,com_amazon,com_apple,com_salesforce,com_facebook,com_google,com_intel,com_microsoft,com_ibm,title_pmanager,title_sweng,title_swengman,title_datasci,title_other,title_hweng,continent_namerica,continent_samerica,continent_africa,continent_oceania,continent_asia,continent_europe |
 
 ```         
 
 
 
-
-
 ```
 
 \
-
-
-
 
 teamcharacteristics
 
