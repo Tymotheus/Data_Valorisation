@@ -16,6 +16,9 @@ We took care of preprocessing and visualisation. We drew some first conclusions.
 1. Work only on the version from this repo. If you finish some feature, check that it is not causing errors, push it to this repo 
 2. I cleaned the notebook a bit, I did some POC tree, don't know any theory behind it :)
 3. Move plotting to some other place?
+## Using our code
+To use our code, get the data from the data folder and use one of the 2 R notebooks. Also make sure to mention us if you want to show your results to the world :)
 ## To do in the future:
 - [ ] Tidy up all the files, move the .csv datasets to the separate folder
 - [ ] Create the dockerfile for the project so you can run it out of the box
+
