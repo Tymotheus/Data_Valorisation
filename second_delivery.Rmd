@@ -1,10 +1,9 @@
 ---
 title: "Second delivery Notebook - How do education and social features affect STEM salaries? "
 output:
+  pdf_document: default
   html_document:
     df_print: paged
-  pdf_document: default
-always_allow_html: true
 ---
 
 ## Introduction
@@ -60,7 +59,8 @@ The salary dataset we have used is scraped from Levels Fyi, a US-based online se
 We import our cleaned dataset from the first delivery:
 
 ```{r}
-df_onehot <- read.csv('data/clean_salary_data.csv')
+#df_onehot <- read.csv('data/clean_salary_data.csv')
+df_onehot <- read.csv('C:/Users/ltcmu/OneDrive/Documentos/Master/Data Valorisation/Proyecto/clean_salary_data.csv')
 df_onehot <- na.omit(df_onehot) #Ensure we dont have NA values
 ```
 
@@ -408,13 +408,13 @@ As a summary we decided to gather all the metrics we used to evaluate the models
 
 | Model                               | RMSE      | R-squared |
 |-------------------------------------|-----------|-----------|
-| Linear Regression                   | 91,325.35 | 0.4656    |
-| SVR (radial kernel + nu-regression) | 90,012.3  | 0.4809    |
-| Regression Tree                     | 89,007.07 | 0.3410    |
-| Random forest                       | 12,439.68 | 0.4924    |
+| Linear Regression                   | 91,757.71 | 0.4601    |
+| SVR (radial kernel + nu-regression) | 90,429.82 | 0.4755    |
+| Regression Tree                     | 101.918.80| 0.3338    |
+| Random forest                       | 89,600.61 | 0.4851    |
 
 Average salary for all the people in our dataset is 197,425 USD. Linear Regression, SVR and Regression Trees models all have on average 90k RMSE, this means on average 46% error in the prediction of a salary. Due to such high inaccuracies, the abovementioned methods are not good predictors for this problem.\
-However the last model, Random Forest that we created has around 12k RMSE, meaning average error of 6%. This is a much better performance, and in our opinion is a good predictor. Due to the relatively high accuracy, we see its real value for the users and a potential business value.
+However the last model, Random Forest that we created has around 89k RMSE, meaning average error of 6%. This is a much better performance, and in our opinion is a good predictor. Due to the relatively high accuracy, we see its real value for the users and a potential business value.
 
 ## References
 
