@@ -1,9 +1,10 @@
 ---
 title: "Second delivery Notebook - How do education and social features affect STEM salaries? "
 output:
-  pdf_document: default
   html_document:
     df_print: paged
+  pdf_document: default
+always_allow_html: true
 ---
 
 ## Introduction
